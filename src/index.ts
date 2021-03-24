@@ -63,6 +63,8 @@ function createAxiosInstance(baseURL: string, timeout: number, headerInjectionFu
     return service;
 }
 
+let vueInstance = null
+
 export default {
     name: REQUEST_MODULE,
     dependsOn: null,
@@ -103,5 +105,18 @@ export default {
         let uiHandler = registry.moduleVarGet(REQUEST_MODULE, "ui");
         vue.prototype.$requestUI = createAxiosInstance(baseURL, timeout, headerInjectionFunc, uiHandler);
 
+        vueInstance = vue
+    },
+    request(config) {
+        if (vueInstance) {
+            return vueInstance.prototype.$request(config)
+        }
+        console.log('Vue not initialized yet')
+    },
+    requestUI(config) {
+        if (vueInstance) {
+            return vueInstance.prototype.$requestUI(config)
+        }
+        console.log('Vue not initialized yet')
     }
 }
