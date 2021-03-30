@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios from "axios";
 
 const REQUEST_MODULE = "request";
 
@@ -9,16 +9,21 @@ interface RequestUIHandler {
 
 type HeaderProvider = (path) => object;
 
-function createAxiosInstance(baseURL: string, timeout: number, headerInjectionFunc: HeaderProvider, uiHandler?: RequestUIHandler) {
+function createAxiosInstance(
+    baseURL: string,
+    timeout: number,
+    headerInjectionFunc: HeaderProvider,
+    uiHandler?: RequestUIHandler
+) {
     const service = axios.create({
         baseURL,
         withCredentials: true, // send cookies when cross-domain requests
         timeout // request timeout
-    })
+    });
 
     // request interceptor
     service.interceptors.request.use(
-        config => {
+        (config) => {
             const addHeaders = headerInjectionFunc(config.url);
             var headers;
             if (config.headers) {
@@ -31,39 +36,39 @@ function createAxiosInstance(baseURL: string, timeout: number, headerInjectionFu
             }
             return { ...config, headers };
         },
-        error => {
+        (error) => {
             if (uiHandler) {
                 uiHandler.error(error);
             }
             if (uiHandler) {
                 uiHandler.loading(false);
             }
-            return Promise.reject(error)
+            return Promise.reject(error);
         }
-    )
+    );
 
     // response interceptor
     service.interceptors.response.use(
-        response => {
+        (response) => {
             if (uiHandler) {
                 uiHandler.loading(false);
             }
             return response;
         },
-        error => {
+        (error) => {
             if (uiHandler) {
                 uiHandler.error(error);
             }
             if (uiHandler) {
                 uiHandler.loading(false);
             }
-            return Promise.reject(error)
+            return Promise.reject(error);
         }
-    )
+    );
     return service;
 }
 
-let vueInstance = null
+let vueInstance = null;
 
 export default {
     name: REQUEST_MODULE,
@@ -79,44 +84,62 @@ export default {
         }
     },
     start({ vue, registry }) {
-
         // create an axios instance
-        let httpCfg = registry.configGet('http');
+        let httpCfg = registry.configGet("http");
 
-        let baseURL = httpCfg ? httpCfg['endpoint'] : null;
-        let timeout = httpCfg ? httpCfg['timeout'] : 15000;
+        let baseURL = httpCfg ? httpCfg["endpoint"] : null;
+        let timeout = httpCfg ? httpCfg["timeout"] : 15000;
 
-        const headerProviders = registry.moduleVarGet(REQUEST_MODULE, "headerProvider");
-        const flattenHeaderProviders = headerProviders ? headerProviders.reduce((a, b) => [...a, ...b], []) : [];
+        const headerProviders = registry.moduleVarGet(
+            REQUEST_MODULE,
+            "headerProvider"
+        );
+        const flattenHeaderProviders = headerProviders
+            ? headerProviders.reduce((a, b) => [...a, ...b], [])
+            : [];
 
-        const headerInjectionFunc = flattenHeaderProviders.length > 0
-            ? (path) => {
-                const headers = flattenHeaderProviders //
-                    .map(hp => hp(path)) //
-                    .reduce((h1, h2) => { return { ...h1, ...h2 } }, {});
-                return headers;
-            }
-            : () => { return {} }
+        const headerInjectionFunc =
+            flattenHeaderProviders.length > 0
+                ? (path) => {
+                    const headers = flattenHeaderProviders //
+                        .map((hp) => hp(path)) //
+                        .reduce((h1, h2) => {
+                            return { ...h1, ...h2 };
+                        }, {});
+                    return headers;
+                }
+                : () => {
+                    return {};
+                };
 
         // headless request
-        vue.prototype.$request = createAxiosInstance(baseURL, timeout, headerInjectionFunc);
+        vue.config.globalProperties.$request = createAxiosInstance(
+            baseURL,
+            timeout,
+            headerInjectionFunc
+        );
 
         // ui request
         let uiHandler = registry.moduleVarGet(REQUEST_MODULE, "ui");
-        vue.prototype.$requestUI = createAxiosInstance(baseURL, timeout, headerInjectionFunc, uiHandler);
+        vue.config.globalProperties.$requestUI = createAxiosInstance(
+            baseURL,
+            timeout,
+            headerInjectionFunc,
+            uiHandler
+        );
 
-        vueInstance = vue
+        vueInstance = vue;
     },
     request(config) {
         if (vueInstance) {
-            return vueInstance.prototype.$request(config)
+            return vueInstance.config.globalProperties.$request(config);
         }
-        console.log('Vue not initialized yet')
+        console.log("Vue not initialized yet");
     },
     requestUI(config) {
         if (vueInstance) {
-            return vueInstance.prototype.$requestUI(config)
+            return vueInstance.config.globalProperties.$requestUI(config);
         }
-        console.log('Vue not initialized yet')
+        console.log("Vue not initialized yet");
     }
-}
+};

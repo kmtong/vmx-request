@@ -7,7 +7,10 @@ import VueModx from 'vue-modx'
 import RequestModule from 'vmx-request'
 import RequestElementUIModule from 'vmx-request-elm' // provide UI handler for HTTP requests
 
-Vue.use(VueModx, {
+// vue3-style
+const app = createApp({})
+
+app.use(VueModx, {
     modules: [RequestModule, RequestElementUIModule],
     config: {
         http: {
